@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<title>MediGuide CH</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<style>
+:root{--bg:#f1f6f8;--card:#fff;--tx:#18262c;--mu:#667a83;--ac:#0e8f8a;--bd:#dde8ec;--r3:#dc2626;--r2:#d97706;--r1:#2563eb;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px)}
+@media(prefers-color-scheme:dark){:root{--bg:#0d1518;--card:#172226;--tx:#e8f1f3;--mu:#9bb0b8;--bd:#263840}}
+*{box-sizing:border-box}
+html,body{margin:0;background:linear-gradient(160deg,#d3f0ec,var(--bg) 40%,#e4eafb) fixed;color:var(--tx);font:17px/1.45 -apple-system,system-ui,Helvetica,sans-serif}
+@media(prefers-color-scheme:dark){html,body{background:linear-gradient(160deg,#0f2a2a,var(--bg) 40%,#141a2e) fixed}}
+main{max-width:640px;margin:0 auto;padding:12px 14px 100px}
+h1{font-size:25px;margin:6px 0 4px}h2{font-size:17px;margin:0 0 6px}
+.card{background:var(--card);border-radius:18px;padding:14px;margin-bottom:10px;box-shadow:0 6px 18px rgba(14,143,138,.10)}
+input,select,button{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:12px;padding:12px;width:100%;margin:4px 0}
+button{background:linear-gradient(135deg,var(--ac),#2563eb);color:#fff;border:0;font-weight:600}
+button.s{background:var(--bg);color:var(--tx);border:1px solid var(--bd)}
+.row{display:flex;gap:8px}.row>*{flex:1}
+.mu{color:var(--mu);font-size:14px}
+.item{display:flex;align-items:center;gap:10px;cursor:pointer}
+.chip{display:inline-block;background:var(--bg);border:1px solid var(--bd);border-radius:20px;padding:5px 12px;margin:3px 3px 3px 0;font-size:14px;cursor:pointer}
+.chip.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.note{background:rgba(14,143,138,.1);border-radius:10px;padding:8px;margin-top:8px;font-size:15px}
+.ix{border-left:6px solid;border-radius:12px;padding:10px;margin:8px 0;background:var(--card)}
+.l3{border-color:var(--r3)}.l2{border-color:var(--r2)}.l1{border-color:var(--r1)}
+.tag{font-size:12px;font-weight:700;padding:2px 8px;border-radius:10px;color:#fff;margin-left:6px}
+.t3{background:var(--r3)}.t2{background:var(--r2)}.t1{background:var(--r1)}
+a.call{display:block;background:var(--r3);color:#fff;text-align:center;text-decoration:none;border-radius:12px;padding:13px;font-weight:600;margin-bottom:6px}
+nav{position:fixed;bottom:0;left:0;right:0;display:flex;overflow-x:auto;background:var(--card);box-shadow:0 -4px 20px rgba(0,0,0,.08);padding-bottom:env(safe-area-inset-bottom,0px)}
+nav button{background:none;color:var(--mu);border-radius:0;font-size:11px;padding:8px 6px;margin:0;flex:1 0 auto;min-width:68px;width:auto}
+nav button.on{color:var(--ac)}nav span{display:block;font-size:22px}
+</style>
+</head>
+<body>
+<main id="app"></main>
+<nav id="nav"></nav>
+<script>
+const nz=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const $=id=>document.getElementById(id);
+const KEY="mediguide_v1",D=[];
+let S={my:[]},tab="rech",det=null,sel=[],org="reins",Q="";
+try{const r=localStorage.getItem(KEY);if(r)S=Object.assign(S,JSON.parse(r))}catch(e){}
+const save=()=>{try{localStorage.setItem(KEY,JSON.stringify(S))}catch(e){}};
+D.push(
+["Paracétamol","Dafalgan, Panadol, Ben-u-ron","Antidouleur / fièvre","douleur fievre mal de tete grippe rhume dents","Rares aux doses normales : éruption cutanée.","Une prise excessive ou prolongée abîme le foie ; risque accru avec l'alcool.","Respecter la dose maximale de la notice. Attention aux autres produits qui en contiennent aussi (rhume, grippe).","foie","paracetamol","OTC"],
+["Ibuprofène","Algifor, Brufen, Nurofen","Anti-inflammatoire (AINS)","douleur fievre mal de tete migraine regles dos muscle dent grippe inflammation arthrose","Maux d'estomac, nausées, brûlures, ballonnements ; rétention d'eau ; hausse de la tension.","Usage fréquent : ulcère et saignements digestifs, atteinte des reins, risque cardiovasculaire accru.","À prendre pendant un repas. Déconseillé en fin de grossesse, en cas d'ulcère, d'insuffisance rénale ou cardiaque.","estomac reins coeur","ains ibu","OTC"],
+["Diclofénac","Voltaren, Olfen","Anti-inflammatoire (AINS)","douleur arthrose inflammation dos muscle entorse regles","Maux d'estomac, nausées, vertiges, hausse des enzymes du foie.","Risque cardiovasculaire plus marqué que d'autres AINS ; estomac, reins, foie.","La plus petite dose, le moins longtemps possible. À éviter en cas de maladie cardiaque ou d'ulcère.","estomac reins coeur foie","ains","OTC"],
+["Acide acétylsalicylique","Aspirine, Aspégic","Antidouleur / antiplaquettaire","douleur fievre mal de tete grippe prevention caillots infarctus","Maux d'estomac, saignements (nez, gencives, digestifs), bleus.","Usage prolongé : ulcère et saignements digestifs.","Pas chez l'enfant ou l'adolescent avec une fièvre virale (syndrome de Reye). Attention avec les anticoagulants.","estomac","ains aspi","OTC"],
+["Métamizole","Novalgine, Minalgin","Antidouleur / fièvre","douleur fievre colique spasme mal de ventre post operatoire","Baisse de tension (surtout en injection), éruptions ; très rarement chute des globules blancs.","Rare : atteinte du sang (agranulocytose).","Fièvre, mal de gorge ou aphtes sous traitement : arrêter et consulter vite.","sang","metam","Ord."],
+["Tramadol","Tramal, Tramadol Mepha","Opioïde (douleurs fortes)","douleur forte post operatoire dos cancer","Nausées, vertiges, somnolence, constipation, sueurs, bouche sèche.","Dépendance et accoutumance possibles ; risque de convulsions ; syndrome sérotoninergique avec certains antidépresseurs.","Pas d'alcool. Prudence au volant. À utiliser le moins longtemps possible.","cerveau","opio sed sero","Ord."],
+["Sumatriptan","Imigran, Tria","Triptan (migraine)","migraine crise aura","Sensation d'oppression ou de chaleur, fourmillements, somnolence, nausées.","Prise trop fréquente : maux de tête de rebond (par abus de médicament).","Contre-indiqué en cas de maladie cardiaque ou de tension non contrôlée. À prendre au début de la crise.","coeur cerveau","triptan","Ord."],
+["Pantoprazole / Oméprazole","Pantozol, Antramups, Omeprazol","Inhibiteur de la pompe à protons (IPP)","reflux brulures estomac acidite ulcere gastrite","Maux de tête, diarrhée ou constipation, ballonnements.","Usage prolongé : carence en vitamine B12, magnésium, fer ; risque de fractures et d'infections digestives. Reflux de rebond à l'arrêt.","À utiliser le temps utile seulement ; demande un bilan si le traitement dure.","estomac os metabo","ipp","OTC"],
+["Dompéridone","Motilium","Anti-nauséeux","nausees vomissements digestion lourdeur","Bouche sèche, maux de tête, crampes ; rarement troubles du rythme cardiaque.","Rare : allongement de l'intervalle QT (rythme du cœur).","Courte durée seulement. Prudence en cas de problème cardiaque.","coeur","qt","Ord."],
+["Butylscopolamine","Buscopan","Antispasmodique","mal de ventre crampes colique spasme regles","Bouche sèche, battements plus rapides, vision floue, difficulté à uriner.","Peu de données de long terme ; usage ponctuel.","Contre-indiqué en cas de glaucome à angle fermé. Douleur forte ou fièvre : consulter.","","anticholi","OTC"],
+["Lopéramide","Imodium","Antidiarrhéique","diarrhee gastro voyage","Constipation, ballonnements, vertiges.","À fortes doses : risque cardiaque.","Pas en cas de fièvre, de sang dans les selles. Boire beaucoup. Pas pour les jeunes enfants.","coeur","","OTC"],
+["Macrogol","Movicol, Transipeg","Laxatif osmotique","constipation transit","Ballonnements, gaz, diarrhée si trop.","Bien toléré à long terme avec une bonne hydratation.","Boire suffisamment. Avis médical si la constipation dure.","","","OTC"],
+["Cétirizine","Zyrtec, Cetirizin","Antihistaminique","allergie rhume des foins urticaire demangeaisons pollen rhinite","Somnolence légère, bouche sèche, maux de tête.","Bien toléré ; peut être pris pendant les saisons d'allergie.","Peut diminuer la vigilance : prudence au volant, surtout avec de l'alcool.","","sed1","OTC"],
+["Salbutamol","Ventolin","Bronchodilatateur (asthme)","asthme essoufflement toux sifflement bronches","Tremblements, palpitations, maux de tête, nervosité.","Besoin croissant du spray = asthme mal contrôlé : consulter. Fortes doses : baisse du potassium.","Médicament de secours, pas de fond. Consulter si l'usage devient plus fréquent.","coeur","beta2","Ord."],
+["Xylométazoline","Otrivin, Nasivin","Décongestionnant nasal","nez bouche rhume sinusite","Sécheresse, irritation nasale, picotements.","Au-delà d'environ une semaine : rhinite médicamenteuse (nez bouché en permanence).","À limiter à quelques jours.","","","OTC"],
+["Dextrométhorphane","(sirops contre la toux sèche)","Antitussif","toux seche irritative rhume","Somnolence, vertiges, nausées.","Risque d'abus à hautes doses.","Interactions avec les antidépresseurs (syndrome sérotoninergique). Pas pour les jeunes enfants.","cerveau","sero","OTC"],
+["Ambroxol / Bromhexine","Mucosolvan, Bisolvon","Mucolytique","toux grasse bronchite glaires rhume","Troubles digestifs légers, nausées.","Peu de risques connus.","Bien boire. Avis médical si la toux dure plus de 2 semaines.","","","OTC"],
+["Amoxicilline","Clamoxyl, Amoxi-Mepha","Antibiotique (pénicilline)","infection bacterienne angine otite bronchite sinusite cystite dent","Diarrhée, nausées, éruption cutanée, mycose.","Antibiotiques répétés : déséquilibre de la flore intestinale et résistances.","Allergie à la pénicilline : ne pas prendre. Aller jusqu'au bout selon la prescription. Inutile contre un virus (rhume, grippe).","estomac","antibio","Ord."],
+["Ciprofloxacine","Ciproxine","Antibiotique (fluoroquinolone)","infection urinaire cystite pyelonephrite prostatite","Nausées, diarrhée, vertiges, sensibilité au soleil.","Peut provoquer des douleurs de tendons (rupture possible), des fourmillements durables, des troubles psychiques.","Arrêter et consulter en cas de douleur de tendon. Réservé aux cas où d'autres antibiotiques ne conviennent pas.","os coeur","antibio qt fq","Ord."],
+["Metformine","Glucophage, Metfin","Antidiabétique","diabete glycemie sucre type 2","Nausées, diarrhée, goût métallique, ballonnements.","Carence en vitamine B12 possible ; très rarement acidose lactique.","À prendre pendant le repas. Avant certains examens avec produit de contraste : demander au médecin.","metabo reins","metf","Ord."],
+["Lévothyroxine","Euthyrox, Eltroxin","Hormone thyroïdienne","thyroide hypothyroidie fatigue","Si trop dosée : palpitations, nervosité, sueurs, insomnie.","Surdosage prolongé : perte osseuse et troubles du rythme.","À jeun, avant le petit-déjeuner ; espacer du calcium et du fer. Prises de sang régulières.","os coeur","levo","Ord."],
+["Atorvastatine","Sortis","Statine (cholestérol)","cholesterol lipides prevention cardiovasculaire","Douleurs musculaires, maux de tête, troubles digestifs.","Rarement atteinte musculaire sévère ou du foie ; légère hausse de la glycémie.","Douleurs musculaires inexpliquées : consulter. Éviter de grandes quantités de pamplemousse.","foie metabo","statinecyp","Ord."]
+);
+D.push(
+["Amlodipine","Norvasc, Amlodipin","Antihypertenseur (inhibiteur calcique)","tension hypertension","Chevilles gonflées, rougeur du visage, maux de tête, palpitations.","Gonflement des gencives possible.","Ne pas arrêter sans avis. Hygiène dentaire soignée.","coeur","hta amlo","Ord."],
+["Ramipril","Triatec","Antihypertenseur (IEC)","tension hypertension insuffisance cardiaque","Toux sèche persistante, vertiges, fatigue ; rarement gonflement du visage ou de la langue (urgence).","Hausse du potassium, atteinte rénale à surveiller.","Interdit pendant la grossesse. Prises de sang régulières.","reins coeur","hta ieca","Ord."],
+["Métoprolol","Beloc, Lopresor","Bêtabloquant","tension hypertension palpitations angine arythmie","Fatigue, mains et pieds froids, pouls ralenti, rêves intenses.","Peut masquer les signes d'hypoglycémie chez le diabétique.","Ne jamais arrêter brutalement. Prudence en cas d'asthme.","coeur","hta bb","Ord."],
+["Phenprocoumon","Marcoumar","Anticoagulant (antivitamine K)","anticoagulant caillot thrombose phlebite embolie fibrillation","Saignements (nez, gencives), bleus, règles abondantes.","Risque de saignement grave ; contrôle régulier de l'INR.","Beaucoup d'interactions (médicaments, plantes, alcool). Signaler ce traitement à tout soignant.","sang","anticoag vka","Ord."],
+["Apixaban","Eliquis","Anticoagulant (AOD)","anticoagulant caillot thrombose fibrillation embolie","Saignements, bleus, anémie.","Risque de saignement ; fonction rénale à surveiller.","Ne jamais sauter ni doubler une prise sans avis. Signaler le traitement avant toute intervention.","sang reins","anticoag","Ord."],
+["Sertraline","Zoloft, Sertralin","Antidépresseur (ISRS)","depression anxiete panique toc stress post traumatique tristesse","Nausées, diarrhée, maux de tête, sueurs, troubles du sommeil, baisse de libido. Anxiété possible les premières semaines.","Troubles sexuels, léger gain de poids, risque de saignements ; sevrage si arrêt brutal (vertiges, « décharges », irritabilité).","Effet complet après 2 à 4 semaines. Ne jamais arrêter seul. Chez les jeunes, surveiller l'humeur au début. Idées noires : en parler tout de suite à ton médecin.","sexuel metabo cerveau","isrs sero antidep","Ord."],
+["Escitalopram","Cipralex","Antidépresseur (ISRS)","depression anxiete panique phobie sociale","Nausées, maux de tête, somnolence ou insomnie, sueurs, baisse de libido.","Troubles sexuels, prise de poids, allongement du QT à forte dose ; sevrage si arrêt brutal.","Ne pas arrêter seul. Prudence avec d'autres médicaments qui allongent le QT.","sexuel coeur cerveau","isrs sero qt antidep","Ord."],
+["Venlafaxine","Efexor, Venlafaxin","Antidépresseur (IRSN)","depression anxiete phobie panique","Nausées, sueurs, hausse de la tension, bouche sèche, insomnie.","Hypertension ; sevrage souvent intense à l'arrêt : diminution progressive nécessaire.","Contrôler la tension. Ne jamais arrêter brutalement.","coeur cerveau","snri sero antidep","Ord."],
+["Mirtazapine","Remeron, Mirtazapin","Antidépresseur sédatif","depression insomnie anxiete perte appetit","Somnolence, appétit augmenté, prise de poids, bouche sèche.","Prise de poids, hausse possible du cholestérol et de la glycémie.","Très sédatif au début. Pas d'alcool.","metabo","sed antidep","Ord."],
+["Amitriptyline","Saroten","Antidépresseur tricyclique","depression douleur neuropathique migraine prevention insomnie","Bouche sèche, constipation, vision floue, somnolence, difficulté à uriner, palpitations, prise de poids.","Troubles du rythme cardiaque, confusion chez les aînés. Dangereux en cas de prise excessive : garder hors de portée.","Prudence si problème cardiaque, glaucome ou prostate. Ne pas arrêter brutalement.","coeur metabo cerveau","tca sed qt sero anticholi antidep","Ord."],
+["Lorazépam","Temesta","Benzodiazépine (anxiolytique)","anxiete angoisse panique insomnie stress crise","Somnolence, ralentissement, vertiges, troubles de la mémoire, chutes.","Dépendance et accoutumance possibles, troubles de la mémoire et de la concentration ; sevrage difficile (insomnie, anxiété, rarement convulsions).","Courte durée seulement. Ne jamais arrêter brutalement : diminution progressive avec le médecin. Pas d'alcool, pas au volant.","cerveau","benzo sed","Ord. (stup.)"],
+["Zolpidem","Stilnox","Somnifère","insomnie sommeil dormir","Somnolence au réveil, vertiges, trous de mémoire ; rarement somnambulisme ou comportements complexes.","Dépendance, accoutumance ; troubles du sommeil à l'arrêt.","Quelques jours à semaines seulement. Se coucher juste après la prise. Pas d'alcool.","cerveau","sed","Ord. (stup.)"],
+["Mélatonine","Circadin, Sleepia","Régulateur du sommeil","insomnie sommeil decalage horaire","Somnolence, maux de tête, vertiges.","Peu de données sur de très longues durées.","À prendre le soir, à heure fixe. Prudence avec d'autres sédatifs.","","sed1","OTC / Ord."],
+["Quétiapine","Seroquel","Antipsychotique","bipolaire schizophrenie psychose depression insomnie agitation","Somnolence, vertiges, bouche sèche, prise de poids, tension basse en se levant.","Prise de poids, hausse du sucre et du cholestérol ; allongement du QT.","Contrôle du poids, du sucre et des graisses dans le sang. Ne pas arrêter brutalement.","metabo coeur","sed qt","Ord."],
+["Lithium","Lithiofor","Régulateur de l'humeur","bipolaire manie humeur","Tremblements des mains, soif, urines fréquentes, nausées.","Reins et thyroïde à surveiller ; marge étroite entre dose utile et toxique : prises de sang régulières.","Boire régulièrement, éviter la déshydratation. Demander conseil avant tout nouveau médicament (anti-inflammatoires, IEC). Vomissements, diarrhée, confusion : consulter vite.","reins metabo","lithium","Ord."],
+["Méthylphénidate","Ritaline, Concerta, Medikinet","Stimulant (TDAH)","tdah adhd attention concentration hyperactivite narcolepsie","Perte d'appétit, insomnie, maux de tête, nervosité, pouls et tension plus élevés.","Chez l'enfant : suivi de la croissance. Surveillance cardiovasculaire ; risque d'usage abusif.","À prendre le matin pour limiter l'insomnie. Prudence en cas de maladie cardiaque ou d'anxiété importante. Ordonnance spéciale.","coeur cerveau","stim","Ord. (stup.)"],
+["Lamotrigine","Lamictal","Antiépileptique / humeur","epilepsie bipolaire convulsions","Maux de tête, vertiges, somnolence, nausées, vision double.","Rare : éruption cutanée grave.","Éruption, fièvre ou aphtes : arrêter et consulter en urgence. Augmentation progressive des doses.","peau","lamo","Ord."],
+["Valproate","Depakine, Orfiril","Antiépileptique / humeur","epilepsie bipolaire convulsions","Nausées, prise de poids, tremblements, perte de cheveux, somnolence.","Atteinte du foie ou du pancréas (rare), baisse des plaquettes. Très dangereux pendant la grossesse (malformations).","Contraception efficace nécessaire chez les femmes en âge d'avoir des enfants. Ne pas arrêter seul.","foie metabo sang","valpro","Ord."],
+["Prednisone / Prednisolone","Prednisolon, Spiricort","Corticoïde","inflammation allergie asthme crise polyarthrite eczema severe","Faim, prise de poids, rétention d'eau, insomnie, irritabilité, hausse du sucre et de la tension.","Ostéoporose, diabète, cataracte, peau fine, infections ; insuffisance surrénale si arrêt brutal après un long traitement.","Ne jamais arrêter brutalement après un traitement long. À prendre le matin avec un repas.","os metabo peau cerveau","cortico","Ord."],
+["Contraceptif oral combiné","Yasmin, Minisiston, Gynera","Contraception hormonale","contraception pilule regles acne regles douloureuses","Nausées, tension des seins, saignements entre les règles, maux de tête, changements d'humeur.","Risque de caillots (thrombose) légèrement augmenté, surtout avec le tabac, après 35 ans, ou en cas de migraine avec aura.","Vomissements ou diarrhée sévère peuvent réduire l'efficacité. Millepertuis déconseillé. Jambe gonflée et douloureuse, douleur thoracique, essoufflement : urgence.","coeur sang","pilule","Ord."],
+["Millepertuis","Remotiv, Hyperiforce","Plante (dépression légère)","depression legere humeur tristesse plante phyto","Sensibilité au soleil, troubles digestifs, fatigue, bouche sèche.","Interactions graves : diminue l'effet de nombreux médicaments.","Ne jamais l'associer à un antidépresseur, à la pilule ou à un anticoagulant sans avis. Même sans ordonnance, il n'est pas anodin.","peau","mille sero","OTC"],
+["Alcool","(substance)","Substance","alcool vin biere","Somnolence, troubles de la coordination, nausées.","Foie, pancréas, cerveau, cœur, dépendance ; aggrave la dépression et l'anxiété.","Interagit avec de nombreux médicaments.","foie cerveau coeur estomac","alc","—"],
+["Jus de pamplemousse","(aliment)","Aliment","pamplemousse jus","—","—","En grande quantité, peut augmenter le taux de certains médicaments (surtout les statines).","","pamp","—"]
+);
+const O={reins:"Reins",foie:"Foie",estomac:"Estomac / intestin",coeur:"Cœur / circulation",os:"Os / tendons",cerveau:"Cerveau / dépendance",metabo:"Poids / sucre / graisses",sexuel:"Sexualité",sang:"Sang",peau:"Peau"};
+const LV={3:"Majeure",2:"Modérée",1:"Mineure"};
+const R=[
+["ains","anticoag",3,"Risque accru de saignements (estomac, intestin). À éviter sauf avis médical."],
+["ains","lithium",3,"Les anti-inflammatoires peuvent faire monter le taux de lithium (intoxication possible). Demande conseil avant."],
+["ieca","lithium",3,"Les IEC peuvent augmenter le taux de lithium. Prises de sang nécessaires."],
+["ains","ains",2,"Deux anti-inflammatoires ensemble : plus d'effets sur l'estomac et les reins, sans gain d'efficacité."],
+["ains","isrs",2,"Risque accru de saignements digestifs."],
+["ains","snri",2,"Risque accru de saignements digestifs."],
+["ains","hta",2,"Les anti-inflammatoires peuvent réduire l'effet des médicaments contre la tension et peser sur les reins."],
+["ains","cortico",2,"Risque accru d'ulcère et de saignement digestif."],
+["ains","fq",2,"Risque accru de convulsions."],
+["ibu","aspi",2,"L'ibuprofène peut diminuer la protection cardiaque de l'aspirine à faible dose. Demande à ton pharmacien comment espacer les prises."],
+["sero","sero",3,"Risque de syndrome sérotoninergique selon les doses (agitation, fièvre, sueurs, tremblements, diarrhée, cœur rapide). Urgence si ces signes apparaissent."],
+["triptan","sero",2,"Association possible mais à surveiller : rare syndrome sérotoninergique."],
+["opio","benzo",3,"Risque de ralentissement respiratoire, de somnolence profonde et de coma. Dangereux."],
+["sed","sed",2,"Cumul de médicaments sédatifs : somnolence, chutes, ralentissement de la respiration possible. Ne conduis pas."],
+["alc","sed",3,"L'alcool renforce fortement la sédation : danger (respiration, accidents)."],
+["alc","sed1",2,"Somnolence accrue."],
+["sed1","sed",2,"Somnolence accrue."],
+["sed1","sed1",1,"Somnolence légèrement accrue."],
+["alc","paracetamol",2,"Charge supplémentaire pour le foie, surtout si la consommation est régulière."],
+["alc","ains",2,"Irritation de l'estomac, risque de saignement."],
+["alc","metf",2,"Alcool en excès avec la metformine : risque rare mais grave d'acidose lactique."],
+["alc","antidep",2,"L'alcool peut aggraver la dépression, la somnolence et diminuer l'effet du traitement."],
+["qt","qt",2,"Plusieurs médicaments qui peuvent allonger le QT : risque de troubles du rythme cardiaque. Un ECG peut être utile."],
+["vka","antibio",2,"Les antibiotiques peuvent modifier l'effet de l'anticoagulant : contrôle de l'INR conseillé."],
+["vka","paracetamol",1,"Une prise régulière de paracétamol peut augmenter l'effet anticoagulant."],
+["anticoag","isrs",2,"Risque de saignements accru."],
+["anticoag","snri",2,"Risque de saignements accru."],
+["mille","anticoag",3,"Le millepertuis réduit l'effet des anticoagulants : risque de caillots."],
+["mille","pilule",3,"Le millepertuis peut rendre la pilule moins efficace : risque de grossesse."],
+["mille","statinecyp",2,"Peut réduire l'effet de la statine."],
+["statinecyp","pamp",2,"De grandes quantités de jus de pamplemousse augmentent le taux de statine : douleurs musculaires possibles."],
+["levo","ipp",2,"Les IPP peuvent réduire l'absorption de la lévothyroxine : contrôle de la TSH conseillé."],
+["bb","beta2",2,"Les bêtabloquants peuvent affaiblir l'effet du salbutamol et gêner les asthmatiques."],
+["valpro","lamo",3,"Le valproate augmente fortement le taux de lamotrigine : risque d'éruption grave. Dose à adapter par le médecin."],
+["pilule","lamo",2,"Les œstrogènes peuvent diminuer le taux de lamotrigine."],
+["cortico","metf",2,"Les corticoïdes font monter la glycémie et peuvent contrarier la metformine."],
+["cortico","fq",3,"Risque accru de tendinites et de ruptures de tendon."],
+["cortico","anticoag",2,"Risque de saignements et variations de l'effet anticoagulant."],
+["stim","snri",2,"Cumul d'effets sur la tension et le pouls."],
+["tca","isrs",2,"Un ISRS peut augmenter le taux de l'amitriptyline : effets indésirables accrus."],
+["anticholi","anticholi",2,"Cumul d'effets anticholinergiques : bouche sèche, constipation, difficultés à uriner, confusion (surtout chez les aînés)."]
+];
+const C=[
+["Mal de tête","mal de tete cephalee tete","Paracétamol,Ibuprofène,Acide","Mal de tête brutal et violent, avec fièvre, raideur de la nuque, trouble de la vision ou de la parole : urgence 144. Plus de quelques jours par mois : consulte (risque de maux de tête de rebond)."],
+["Migraine","migraine aura crise","Sumatriptan,Ibuprofène,Paracétamol","Si les crises sont fréquentes, un médecin peut proposer un traitement de fond."],
+["Douleurs (dos, muscles, articulations)","douleur mal de dos lombalgie muscle articulation arthrose entorse courbature","Paracétamol,Ibuprofène,Diclofénac,Métamizole","Bouge dès que possible. Anti-inflammatoires : le moins longtemps possible, avec un repas."],
+["Règles douloureuses","regles douloureuses dysmenorrhee crampes","Ibuprofène,Diclofénac,Butylscopolamine,Contraceptif","Douleurs très fortes ou nouvelles : consulte (endométriose possible)."],
+["Fièvre","fievre temperature","Paracétamol,Ibuprofène","Bébé de moins de 3 mois, fièvre très élevée, raideur de nuque ou fièvre depuis plus de 3 jours : consulte."],
+["Rhume / grippe","rhume grippe enrhume nez qui coule courbature","Paracétamol,Ibuprofène,Xylométazoline,Dextrométhorphane,Ambroxol","Un virus ne se soigne pas avec des antibiotiques. Repos, boissons, lavage du nez."],
+["Toux","toux seche toux grasse bronchite","Dextrométhorphane,Ambroxol","Toux sèche : antitussif. Toux grasse : fluidifiant. Si elle dure plus de 2 à 3 semaines, consulte."],
+["Nez bouché","nez bouche sinusite congestion","Xylométazoline","Maximum quelques jours."],
+["Allergies","allergie rhume des foins pollen urticaire demangeaison rhinite","Cétirizine,Prednisone","Gonflement du visage ou de la gorge, difficulté à respirer : urgence 144."],
+["Asthme","asthme essoufflement sifflement","Salbutamol,Prednisone","Un traitement de fond est souvent nécessaire : parles-en à ton médecin."],
+["Brûlures d'estomac / reflux","reflux brulure estomac acidite gastrite ulcere","Pantoprazole","Évite les repas copieux et tardifs, l'alcool, le tabac. Brûlures fréquentes : bilan médical."],
+["Nausées / vomissements","nausee vomissement mal au coeur","Dompéridone","Vomissements prolongés ou signes de déshydratation : consulte."],
+["Diarrhée","diarrhee gastro","Lopéramide","Bois beaucoup. Pas de lopéramide en cas de fièvre ou de sang dans les selles."],
+["Constipation","constipation transit","Macrogol","Fibres, eau et mouvement aident."],
+["Mal de ventre","mal de ventre douleur abdominale crampes colique","Butylscopolamine,Paracétamol,Métamizole","Douleur intense, fièvre, ventre dur ou vomissements : consulte rapidement (144 si très fort)."],
+["Dépression","depression deprime tristesse moral bas","Sertraline,Escitalopram,Venlafaxine,Mirtazapine,Amitriptyline,Millepertuis","L'effet complet demande 2 à 4 semaines. Ne pas arrêter seul. Si tu as des idées de mourir ou de te faire du mal, appelle le 143 ou le 144."],
+["Anxiété / angoisse","anxiete angoisse stress panique phobie","Sertraline,Escitalopram,Lorazépam","Benzodiazépines : courte durée seulement (risque de dépendance). La psychothérapie est très efficace."],
+["Insomnie","insomnie sommeil dormir","Mélatonine,Zolpidem,Mirtazapine,Lorazépam","D'abord : heures régulières, écrans éteints, pas de caféine le soir. Somnifères : courte durée."],
+["TDAH","tdah adhd attention hyperactivite concentration","Méthylphénidate","Suivi par un spécialiste. La prise en charge comprend aussi des mesures éducatives et psychologiques."],
+["Trouble bipolaire","bipolaire manie maniaco depression humeur","Lithium,Valproate,Lamotrigine,Quétiapine","Traitement strictement encadré par le psychiatre."],
+["Psychose / schizophrénie","psychose schizophrenie delire hallucination","Quétiapine","Traitement et suivi par un psychiatre."],
+["Épilepsie","epilepsie convulsions crises","Lamotrigine,Valproate","Ne jamais arrêter un antiépileptique seul : risque de crise."],
+["Tension élevée","hypertension tension arterielle","Ramipril,Amlodipine,Métoprolol","Souvent sans symptôme : contrôles réguliers."],
+["Cholestérol","cholesterol lipides","Atorvastatine","L'alimentation et l'activité aident beaucoup."],
+["Diabète de type 2","diabete sucre glycemie","Metformine","L'alimentation et le mouvement restent la base."],
+["Thyroïde","thyroide hypothyroidie fatigue froid","Lévothyroxine","Contrôle sanguin (TSH) régulier."],
+["Infections bactériennes","infection angine otite cystite bronchite sinusite dent","Amoxicilline,Ciprofloxacine","Seul un médecin décide d'un antibiotique."],
+["Anticoagulation / caillots","caillot thrombose phlebite embolie fibrillation anticoagulant","Phenprocoumon,Apixaban","Jambe douloureuse et gonflée, essoufflement soudain, douleur thoracique : 144."],
+["Contraception","contraception pilule","Contraceptif","Un médecin ou le planning familial aide à choisir la méthode adaptée."],
+["Inflammation sévère","inflammation polyarthrite eczema severe","Prednisone","Traitement court si possible."],
+["Douleur forte","douleur forte intense post operatoire","Tramadol,Métamizole","Sur ordonnance. Prudence : dépendance possible."],
+["Arthrose","arthrose articulation genou hanche","Paracétamol,Ibuprofène,Diclofénac","Mouvement et renforcement musculaire aident."]
+];
+const di=n=>D.findIndex(d=>nz(d[0]).startsWith(nz(n)));
+const sn=i=>D[i][0].split(" /")[0];
+const FOOT='<div class="mu" style="margin:14px 0">ℹ️ Information générale, pas un avis médical. Ne commence, ne change et n\'arrête jamais un traitement sans en parler à ton médecin ou pharmacien. Les catégories de remise sont indicatives.</div>';
+const TABS=[["rech","🔍","Recherche"],["liste","📚","Liste"],["inter","⚡","Interactions"],["lgt","⏳","Long terme"],["my","⭐","Ma liste"],["aide","🆘","Aide"]];
+function go(t){tab=t;det=null;render();scrollTo(0,0)}
+function op(i){det=i;render();scrollTo(0,0)}
+function render(){$("nav").innerHTML=TABS.map(t=>`<button class="${tab==t[0]&&det===null?"on":""}" onclick="go('${t[0]}')"><span>${t[1]}</span>${t[2]}</button>`).join("");$("app").innerHTML=(det!==null?detail(det):({rech,liste,inter,lgt,my,aide})[tab]())+FOOT}
+function row(i){const d=D[i];return `<div class="card item" onclick="op(${i})"><div style="flex:1"><b>${esc(d[0])}</b><div class="mu">${esc(d[2])} · ${esc(d[1])}</div></div><span class="chip">${esc(d[9])}</span></div>`}
+
+/* RECHERCHE */
+const hit=(h,q)=>q.split(" ").filter(Boolean).every(w=>h.includes(w));
+function results(q){q=nz(q).trim();if(q.length<2)return '<div class="mu">Tape au moins 2 lettres : un symptôme, une maladie, un médicament ou une marque.</div>';
+ let o="";
+ C.forEach(c=>{if(hit(nz(c[0]+" "+c[1]),q)){o+=`<div class="card"><h2>🩺 ${esc(c[0])}</h2><div class="mu">Médicaments souvent utilisés :</div>${c[2].split(",").map(n=>{const i=di(n);return i<0?"":`<span class="chip" onclick="op(${i})">${esc(sn(i))}</span>`}).join("")}<div class="note">${esc(c[3])}</div></div>`}});
+ D.forEach((d,i)=>{if(hit(nz(d[0]+" "+d[1]+" "+d[2]+" "+d[3]),q))o+=row(i)});
+ return o||'<div class="card mu">Aucun résultat. Essaie un autre mot (ex. « tête », « estomac », « sommeil »).</div>'}
+function ds(){Q=$("q").value;$("res").innerHTML=results(Q)}
+function qs(t){$("q").value=t;ds()}
+function rech(){setTimeout(ds,0);return `<h1>💊 MediGuide CH</h1><div class="mu">Cherche un symptôme, une maladie, un médicament ou une marque.</div><input id="q" placeholder="🔍 Ex. : dépression, mal de tête, Dafalgan…" value="${esc(Q)}" oninput="ds()" style="font-size:18px;margin:10px 0"><div>${["Mal de tête","Dépression","Grippe","Insomnie","Allergies","Anxiété","Douleurs"].map(t=>`<span class="chip" onclick="qs('${t}')">${t}</span>`).join("")}</div><br><div id="res"></div>`}
+
+/* LISTE */
+function dl(){const f=nz($("lf").value),c=$("lc").value;$("ll").innerHTML=D.map((d,i)=>({d,i})).filter(x=>(!c||x.d[2]==c)&&(!f||nz(x.d[0]+" "+x.d[1]).includes(f))).sort((a,b)=>a.d[0].localeCompare(b.d[0],"fr")).map(x=>row(x.i)).join("")}
+function liste(){const cl=[...new Set(D.map(d=>d[2]))].sort();setTimeout(dl,0);return `<h1>📚 Tous les médicaments</h1><div class="mu">${D.length} fiches</div><div class="card"><input id="lf" placeholder="Filtrer par nom ou marque…" oninput="dl()"><select id="lc" onchange="dl()"><option value="">Toutes les catégories</option>${cl.map(c=>`<option>${esc(c)}</option>`).join("")}</select></div><div id="ll"></div>`}
+
+/* FICHE */
+function togMy(i){const n=D[i][0],k=S.my.indexOf(n);k<0?S.my.push(n):S.my.splice(k,1);save();render()}
+function detail(i){const d=D[i],mine=S.my.includes(d[0]);
+ return `<button class="s" onclick="det=null;render()">← Retour</button><h1>${esc(d[0])}</h1><div class="mu">${esc(d[1])}</div><div><span class="chip">${esc(d[2])}</span><span class="chip">${esc(d[9])}</span></div><br>
+ <div class="card"><h2>⚠️ Effets secondaires courants</h2>${esc(d[4])}</div>
+ <div class="card"><h2>⏳ À long terme</h2>${esc(d[5])}</div>
+ <div class="card"><h2>🛡️ Précautions</h2>${esc(d[6])}</div>
+ <div class="row"><button onclick="togMy(${i})">${mine?"✓ Dans ma liste":"⭐ Ajouter à ma liste"}</button><button class="s" onclick="sel=[${i}];det=null;tab='inter';render()">⚡ Interactions</button></div>`}
+
+/* INTERACTIONS */
+function chk(ids){const out=[];for(let a=0;a<ids.length;a++)for(let b=a+1;b<ids.length;b++){const A=D[ids[a]][8].split(" "),B=D[ids[b]][8].split(" ");R.forEach(r=>{if((A.includes(r[0])&&B.includes(r[1]))||(A.includes(r[1])&&B.includes(r[0])))out.push({a:ids[a],b:ids[b],l:r[2],t:r[3]})})}return out.sort((x,y)=>y.l-x.l)}
+function showI(ids){if(ids.length<2)return '<div class="card mu">Choisis au moins deux éléments pour voir leurs interactions.</div>';const r=chk(ids);
+ return (r.length?r.map(x=>`<div class="ix l${x.l}"><b>${esc(sn(x.a))} + ${esc(sn(x.b))}</b><span class="tag t${x.l}">${LV[x.l]}</span><div>${esc(x.t)}</div></div>`).join(""):'<div class="card">✅ Aucune interaction connue dans cette base entre ces éléments.</div>')+'<div class="mu">Cette base est limitée : l\'absence de résultat ne prouve pas l\'absence d\'interaction. Demande à ton pharmacien.</div>'}
+function ts(i){const k=sel.indexOf(i);k<0?sel.push(i):sel.splice(k,1);drawI()}
+function drawP(){const q=nz($("fi").value);$("pick").innerHTML=D.map((d,i)=>({d,i})).filter(x=>!q||nz(x.d[0]+" "+x.d[1]).includes(q)).slice(0,80).map(x=>`<span class="chip ${sel.includes(x.i)?"on":""}" onclick="ts(${x.i})">${esc(sn(x.i))}</span>`).join("")}
+function drawI(){$("sel").innerHTML=sel.map(i=>`<span class="chip on" onclick="ts(${i})">${esc(sn(i))} ✕</span>`).join("")||'<span class="mu">Rien de choisi</span>';$("ires").innerHTML=showI(sel);drawP()}
+function inter(){setTimeout(drawI,0);return `<h1>⚡ Interactions</h1><div class="mu">Choisis au moins deux médicaments, plantes ou substances (alcool, pamplemousse).</div><br><div class="card"><div id="sel"></div><div class="row"><button class="s" onclick="sel=S.my.map(n=>D.findIndex(d=>d[0]==n)).filter(i=>i>=0);drawI()">⭐ Ma liste</button><button class="s" onclick="sel=[];drawI()">Effacer</button></div></div><div id="ires"></div><div class="card"><input id="fi" placeholder="Filtrer…" oninput="drawP()"><div id="pick"></div></div>`}
+
+/* LONG TERME */
+function lg(o){org=o;render()}
+function lgt(){const L=D.map((d,i)=>({d,i})).filter(x=>x.d[7].split(" ").includes(org));return `<h1>⏳ Risques à long terme</h1><div class="mu">Choisis un organe ou une fonction pour voir les médicaments concernés.</div><br><div class="card">${Object.entries(O).map(([k,v])=>`<span class="chip ${k==org?"on":""}" onclick="lg('${k}')">${v}</span>`).join("")}</div>${L.map(x=>`<div class="card" onclick="op(${x.i})"><b>${esc(x.d[0])}</b> <span class="chip">${esc(x.d[2])}</span><div class="mu" style="margin-top:6px">${esc(x.d[5])}</div></div>`).join("")||'<div class="card mu">Rien dans cette base.</div>'}`}
+
+/* MA LISTE */
+function addMy(){const n=D[+$("ma").value][0];if(!S.my.includes(n))S.my.push(n);save();render()}
+function delMy(i){S.my=S.my.filter(n=>n!==D[i][0]);save();render()}
+function my(){const ids=S.my.map(n=>D.findIndex(d=>d[0]==n)).filter(i=>i>=0),opts=D.map((d,i)=>[d[0],i]).sort((a,b)=>a[0].localeCompare(b[0],"fr"));
+ return `<h1>⭐ Ma liste</h1><div class="mu">Tes médicaments : l'appli vérifie automatiquement leurs interactions. Les données restent sur ton téléphone.</div><br><div class="card"><select id="ma">${opts.map(o=>`<option value="${o[1]}">${esc(o[0])}</option>`).join("")}</select><button onclick="addMy()">Ajouter</button></div>${ids.map(i=>`<div class="card item" onclick="op(${i})"><div style="flex:1"><b>${esc(D[i][0])}</b><div class="mu">${esc(D[i][2])}</div></div><span class="chip" onclick="event.stopPropagation();delMy(${i})">Retirer</span></div>`).join("")}<h2>Interactions dans ma liste</h2>${showI(ids)}`}
+
+/* AIDE */
+function aide(){return `<h1>🆘 Aide et conseils</h1>
+<div class="card"><a class="call" href="tel:144">📞 144 · Ambulance</a><a class="call" href="tel:112">📞 112 · Urgences</a><a class="call" href="tel:145">📞 145 · Tox Info Suisse (intoxication, médicament pris par erreur)</a><a class="call" href="tel:143">📞 143 · La Main Tendue (écoute 24h/24)</a></div>
+<div class="card"><h2>Règles d'or</h2>${["Va toujours dans la même pharmacie : elle vérifie tes interactions.","Montre ta liste de médicaments à chaque rendez-vous médical.","Ne jamais arrêter brutalement : antidépresseurs, benzodiazépines, corticoïdes, bêtabloquants, antiépileptiques.","Plantes, compléments et alcool comptent aussi comme des « médicaments ».","Signale toujours tes allergies.","Garde les médicaments hors de portée des enfants et rapporte les périmés en pharmacie.","Pour les infos officielles : compendium.ch et swissmedic.ch."].map(t=>`<div class="item" style="cursor:default">• ${t}</div>`).join("")}</div>
+<div class="card mu">MediGuide CH est un outil d'information personnel, pas une source officielle. Il ne remplace ni un médecin, ni un pharmacien, ni la notice de ton médicament.</div>`}
+render();
+</script>
+</body>
+</html>
